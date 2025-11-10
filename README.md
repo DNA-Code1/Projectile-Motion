@@ -1,26 +1,3 @@
-# Re-create the Jupyter notebook with corrected quoting
-
-import nbformat, numpy as np, matplotlib.pyplot as plt
-
-nb = nbformat.v4.new_notebook()
-cells = []
-
-intro_md = r"""
-# Projectile Motion with Air Resistance (1st-Year Physics Simulation Project)
-
-*Goal:* Build a simulation that compares ideal projectile motion (no drag) with motion under quadratic air resistance, explore how launch angle, speed, mass, and drag affect range and flight time, and present conclusions.
-
-## Learning Outcomes
-- Translate Newton’s 2nd law into coupled ODEs and solve them numerically.
-- Compare analytical (no-drag) and numerical (drag) models.
-- Generate and interpret trajectory plots and range–angle curves.
-- Communicate results with clear figures and a short report.
-"""
-cells.append(nbformat.v4.new_markdown_cell(intro_md))
-
-theory_md = r"""
-## Theory
-
 For a projectile of mass \(m\) launched from ground level with speed \(v_0\) and angle \(\theta\):
 
 *No drag (analytic):*
