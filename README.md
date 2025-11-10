@@ -42,25 +42,25 @@
     #reset-btn { background: #e74c3c; color: white; }
     button:hover { transform: translateY(-2px); }
     .graph-container {
-      margin: 30px auto; width: 650px; padding: 20px;
-      background: white; border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin: 40px auto; width: 900px; padding: 20px;
+      background: white; border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
     #graph-canvas {
-      width: 100%; height: 350px; border: 1px solid #ddd;
-      border-radius: 6px; background: #fdfdfd;
+      width: 100%; height: 450px; border: 1px solid #ccc;
+      border-radius: 8px; background: #fdfdfd;
     }
     .legend {
-      margin-top: 10px; text-align: right; font-size: 14px; color: #555;
+      margin-top: 15px; text-align: right; font-size: 15px; color: #444;
     }
-    .legend span { margin-left: 15px; }
-    .legend .ideal { color: #3498db; font-weight: bold; }
-    .legend .real { color: #e74c3c; font-weight: bold; }
+    .legend span { margin-left: 20px; font-weight: bold; }
+    .legend .ideal { color: #3498db; }
+    .legend .real { color: #e74c3c; }
   </style>
 </head>
 <body>
   <h1>Projectile Motion Simulator</h1>
-  <p>Launch a cannonball and compare ideal vs real motion with air resistance.</p>
+  <p>Compare ideal motion vs real motion with air resistance.</p>
 
   <div id="canvas-container"></div>
 
@@ -87,8 +87,8 @@
     <h3>Range vs Launch Angle</h3>
     <canvas id="graph-canvas"></canvas>
     <div class="legend">
-      <span class="ideal">No Drag</span> |
-      <span class="real">With Drag</span>
+      <span class="ideal">No Air Resistance</span> |
+      <span class="real">With Air Resistance</span>
     </div>
   </div>
 
@@ -187,11 +187,15 @@
       angleSlider.input(() => select('#angle-val').html(angleSlider.value()));
       dragToggle.changed(() => select('#drag-status').html(dragToggle.checked ? "ON" : "OFF"));
       launchBtn.mousePressed(() => launched = true);
-      resetBtn.mousePressed(resetSimulation);
+      resetBtn.mousePressed(() => {
+        resetSimulation();
+        graphData = { ideal: [], real: [] };
+        drawGraph(); // Clear graph
+      });
       select('#speed-val').html(30); select('#angle-val').html(45);
     }
 
-    // Enhanced Graph with Labels, Grid, Scale
+    // FULLY VISIBLE GRAPH: 0° to 90°, 0 to max range
     function updateGraph() {
       let idealRange = balls[0].x / scale;
       let realRange = balls[1].x / scale;
@@ -208,63 +212,63 @@
 
     function drawGraph() {
       let ctx = select('#graph-canvas').elt.getContext('2d');
-      let w = 650, h = 350, padding = 60;
+      let w = 900, h = 450, pad = 70;
       ctx.clearRect(0, 0, w, h);
 
-      // Find max range for Y-scale
+      // Get max range from all data
       let allRanges = [...graphData.ideal, ...graphData.real].map(d => d.range);
-      let maxRange = Math.max(...allRanges, 100);
-      let yScale = (h - 2*padding) / maxRange;
-      let xScale = (w - 2*padding) / 90;
+      let maxRange = allRanges.length > 0 ? Math.max(...allRanges) : 100;
+      maxRange = Math.ceil(maxRange / 50) * 50; // Round up to nearest 50
 
-      // Background grid
-      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
-      for (let i = 0; i <= 10; i++) {
-        let y = padding + i * (h - 2*padding)/10;
-        ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(w - padding, y); ctx.stroke();
+      // Grid
+      ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+      for (let i = 0; i <= 6; i++) {
+        let y = pad + i * (h - 2*pad) / 6;
+        ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
       }
-      for (let i = 0; i <= 9; i++) {
-        let x = padding + i * (w - 2*padding)/9;
-        ctx.beginPath(); ctx.moveTo(x, padding); ctx.lineTo(x, h - padding); ctx.stroke();
+      for (let i = 0; i <= 6; i++) {
+        let x = pad + i * (w - 2*pad) / 6;
+        ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
       }
 
       // Axes
-      ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(padding, h - padding); ctx.lineTo(padding, padding);
-      ctx.lineTo(w - padding, padding); ctx.stroke();
+      ctx.moveTo(pad, h - pad); ctx.lineTo(pad, pad);
+      ctx.lineTo(w - pad, pad); ctx.stroke();
+
+      // X-axis: 0°, 15°, 30°, 45°, 60°, 75°, 90°
+      ctx.fillStyle = '#333'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
+      const angles = [0, 15, 30, 45, 60, 75, 90];
+      angles.forEach(a => {
+        let x = pad + (a / 90) * (w - 2*pad);
+        ctx.fillText(a + '°', x, h - pad + 25);
+      });
+
+      // Y-axis: 0 to maxRange in 6 steps
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 6; i++) {
+        let range = (maxRange / 6) * i;
+        let y = h - pad - (range / maxRange) * (h - 2*pad);
+        ctx.fillText(Math.round(range), pad - 15, y);
+      }
 
       // Axis Labels
-      ctx.fillStyle = '#333'; ctx.font = '14px Arial';
+      ctx.font = '16px Arial'; ctx.fillStyle = '#222';
       ctx.textAlign = 'center';
       ctx.fillText('Launch Angle (degrees)', w/2, h - 15);
-      ctx.save(); ctx.translate(20, h/2); ctx.rotate(-Math.PI/2);
+      ctx.save(); ctx.translate(25, h/2); ctx.rotate(-Math.PI/2);
       ctx.fillText('Range (meters)', 0, 0); ctx.restore();
-
-      // Tick marks and labels
-      ctx.font = '12px Arial'; ctx.textAlign = 'center';
-      for (let i = 0; i <= 9; i++) {
-        let angle = i * 10;
-        let x = padding + angle * xScale;
-        ctx.fillText(angle, x, h - padding + 20);
-      }
-      ctx.textAlign = 'right';
-      for (let i = 0; i <= 5; i++) {
-        let range = (maxRange / 5) * i;
-        let y = h - padding - range * yScale;
-        ctx.fillText(Math.round(range), padding - 10, y + 5);
-      }
 
       // Plot: No Drag (Blue)
       ctx.strokeStyle = '#3498db'; ctx.lineWidth = 3;
       ctx.beginPath();
       graphData.ideal.forEach((d, i) => {
-        let x = padding + d.angle * xScale;
-        let y = h - padding - d.range * yScale;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        // Dot at data point
+        let x = pad + (d.angle / 90) * (w - 2*pad);
+        let y = h - pad - (d.range / maxRange) * (h - 2*pad);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         ctx.fillStyle = '#3498db';
-        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
       });
       ctx.stroke();
 
@@ -272,11 +276,11 @@
       ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3;
       ctx.beginPath();
       graphData.real.forEach((d, i) => {
-        let x = padding + d.angle * xScale;
-        let y = h - padding - d.range * yScale;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        let x = pad + (d.angle / 90) * (w - 2*pad);
+        let y = h - pad - (d.range / maxRange) * (h - 2*pad);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         ctx.fillStyle = '#e74c3c';
-        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
       });
       ctx.stroke();
     }
