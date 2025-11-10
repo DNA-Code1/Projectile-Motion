@@ -42,14 +42,20 @@
     #reset-btn { background: #e74c3c; color: white; }
     button:hover { transform: translateY(-2px); }
     .graph-container {
-      margin: 30px auto; width: 600px; padding: 15px;
+      margin: 30px auto; width: 650px; padding: 20px;
       background: white; border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     #graph-canvas {
-      width: 100%; height: 300px; border: 1px solid #ddd;
+      width: 100%; height: 350px; border: 1px solid #ddd;
       border-radius: 6px; background: #fdfdfd;
     }
+    .legend {
+      margin-top: 10px; text-align: right; font-size: 14px; color: #555;
+    }
+    .legend span { margin-left: 15px; }
+    .legend .ideal { color: #3498db; font-weight: bold; }
+    .legend .real { color: #e74c3c; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -78,8 +84,12 @@
   </div>
 
   <div class="graph-container">
-    <h3>Range vs Angle</h3>
+    <h3>Range vs Launch Angle</h3>
     <canvas id="graph-canvas"></canvas>
+    <div class="legend">
+      <span class="ideal">No Drag</span> |
+      <span class="real">With Drag</span>
+    </div>
   </div>
 
   <script>
@@ -181,49 +191,94 @@
       select('#speed-val').html(30); select('#angle-val').html(45);
     }
 
-    // Graph
+    // Enhanced Graph with Labels, Grid, Scale
     function updateGraph() {
-      let idealRange = balls[0].x / scale, realRange = balls[1].x / scale;
+      let idealRange = balls[0].x / scale;
+      let realRange = balls[1].x / scale;
       let angle = angleSlider.value();
+
       graphData.ideal.push({angle, range: idealRange});
       graphData.real.push({angle, range: realRange});
+
       graphData.ideal.sort((a,b) => a.angle - b.angle);
       graphData.real.sort((a,b) => a.angle - b.angle);
+
       drawGraph();
     }
 
     function drawGraph() {
       let ctx = select('#graph-canvas').elt.getContext('2d');
-      let w = 600, h = 300; ctx.clearRect(0,0,w,h);
-      let maxRange = Math.max(...graphData.ideal.map(d=>d.range), 100);
+      let w = 650, h = 350, padding = 60;
+      ctx.clearRect(0, 0, w, h);
+
+      // Find max range for Y-scale
+      let allRanges = [...graphData.ideal, ...graphData.real].map(d => d.range);
+      let maxRange = Math.max(...allRanges, 100);
+      let yScale = (h - 2*padding) / maxRange;
+      let xScale = (w - 2*padding) / 90;
+
+      // Background grid
+      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+      for (let i = 0; i <= 10; i++) {
+        let y = padding + i * (h - 2*padding)/10;
+        ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(w - padding, y); ctx.stroke();
+      }
+      for (let i = 0; i <= 9; i++) {
+        let x = padding + i * (w - 2*padding)/9;
+        ctx.beginPath(); ctx.moveTo(x, padding); ctx.lineTo(x, h - padding); ctx.stroke();
+      }
+
+      // Axes
       ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(50, h-50); ctx.lineTo(50,50); ctx.lineTo(w-50,50); ctx.stroke();
-      ctx.fillStyle = '#333'; ctx.font = '12px Arial';
-      ctx.fillText('Range (m)', w/2-30, h-10);
-      ctx.save(); ctx.translate(15,h/2); ctx.rotate(-Math.PI/2);
-      ctx.fillText('Angle (°)', -30,0); ctx.restore();
+      ctx.beginPath();
+      ctx.moveTo(padding, h - padding); ctx.lineTo(padding, padding);
+      ctx.lineTo(w - padding, padding); ctx.stroke();
 
-      // Ideal
-      ctx.strokeStyle = '#3498db'; ctx.beginPath();
-      graphData.ideal.forEach((d,i) => {
-        let x = 50 + (d.angle/90)*(w-100);
-        let y = h-50 - (d.range/maxRange)*(h-100);
-        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-      }); ctx.stroke();
-
-      // Real
-      ctx.strokeStyle = '#e74c3c'; ctx.beginPath();
-      graphData.real.forEach((d,i) => {
-        let x = 50 + (d.angle/90)*(w-100);
-        let y = h-50 - (d.range/maxRange)*(h-100);
-        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-      }); ctx.stroke();
-
-      // Legend
-      ctx.fillStyle = '#3498db'; ctx.fillRect(w-150,20,15,15);
-      ctx.fillStyle = '#e74c3c'; ctx.fillRect(w-150,45,15,15);
+      // Axis Labels
       ctx.fillStyle = '#333'; ctx.font = '14px Arial';
-      ctx.fillText('No Drag', w-130,33); ctx.fillText('With Drag', w-130,58);
+      ctx.textAlign = 'center';
+      ctx.fillText('Launch Angle (degrees)', w/2, h - 15);
+      ctx.save(); ctx.translate(20, h/2); ctx.rotate(-Math.PI/2);
+      ctx.fillText('Range (meters)', 0, 0); ctx.restore();
+
+      // Tick marks and labels
+      ctx.font = '12px Arial'; ctx.textAlign = 'center';
+      for (let i = 0; i <= 9; i++) {
+        let angle = i * 10;
+        let x = padding + angle * xScale;
+        ctx.fillText(angle, x, h - padding + 20);
+      }
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= 5; i++) {
+        let range = (maxRange / 5) * i;
+        let y = h - padding - range * yScale;
+        ctx.fillText(Math.round(range), padding - 10, y + 5);
+      }
+
+      // Plot: No Drag (Blue)
+      ctx.strokeStyle = '#3498db'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      graphData.ideal.forEach((d, i) => {
+        let x = padding + d.angle * xScale;
+        let y = h - padding - d.range * yScale;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        // Dot at data point
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+      });
+      ctx.stroke();
+
+      // Plot: With Drag (Red)
+      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      graphData.real.forEach((d, i) => {
+        let x = padding + d.angle * xScale;
+        let y = h - padding - d.range * yScale;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+      });
+      ctx.stroke();
     }
 
     function windowResized() { resizeCanvas(800, 400); }
