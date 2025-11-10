@@ -3,289 +3,270 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Projectile Motion with Air Resistance</title>
+  <title>Wave Interference Simulator</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.sound.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f4f8;
-      color: #333;
-      padding: 20px;
+      background: #f4f7fa;
+      color: #222;
       text-align: center;
+      padding: 20px;
     }
-    h1 { margin-bottom: 10px; color: #2c3e50; }
+    h1 { color: #2c3e50; margin-bottom: 10px; }
     p { margin-bottom: 20px; color: #555; }
     #canvas-container {
-      width: 800px; height: 400px; margin: 20px auto;
-      border: 2px solid #3498db; border-radius: 10px;
-      background: #ecf0f1; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 800px; height: 500px; margin: 20px auto;
+      border: 2px solid #3498db; border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
     .controls {
-      max-width: 600px; margin: 20px auto; padding: 15px;
-      background: white; border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      display: flex; flex-direction: column; gap: 12px;
+      max-width: 700px; margin: 20px auto; padding: 18px;
+      background: white; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
     }
     .control-group {
-      display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 10px;
+      display: flex; flex-direction: column; gap: 6px;
     }
-    label { font-weight: 600; color: #2c3e50; }
-    input[type="range"] { flex: 1; min-width: 200px; }
-    button {
-      padding: 10px 20px; font-size: 16px; font-weight: bold;
-      border: none; border-radius: 6px; cursor: pointer;
-      transition: 0.2s;
+    label { font-weight: 600; color: #2c3e50; text-align: left; }
+    input[type="range"] { width: 100%; }
+    button, select {
+      padding: 10px; font-size: 15px; border-radius: 6px; border: none;
+      background: #3498db; color: white; cursor: pointer;
     }
-    #launch-btn { background: #27ae60; color: white; }
-    #reset-btn { background: #e74c3c; color: white; }
-    button:hover { transform: translateY(-2px); }
-    .graph-container {
-      margin: 40px auto; width: 900px; padding: 20px;
-      background: white; border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-    }
-    #graph-canvas {
-      width: 100%; height: 450px; border: 1px solid #ccc;
-      border-radius: 8px; background: #fdfdfd;
-    }
+    button:hover { background: #2980b9; }
     .legend {
-      margin-top: 15px; text-align: right; font-size: 15px; color: #444;
+      margin-top: 15px; font-size: 14px; color: #444;
     }
-    .legend span { margin-left: 20px; font-weight: bold; }
-    .legend .ideal { color: #3498db; }
-    .legend .real { color: #e74c3c; }
+    .legend span { margin: 0 12px; font-weight: bold; }
+    .antinode { color: #e74c3c; }
+    .node { color: #2c3e50; }
   </style>
 </head>
 <body>
-  <h1>Projectile Motion Simulator</h1>
-  <p>Compare ideal motion vs real motion with air resistance.</p>
+  <h1>Wave Interference Simulator</h1>
+  <p>Two point sources → Real-time interference → Sound or Light</p>
 
   <div id="canvas-container"></div>
 
   <div class="controls">
     <div class="control-group">
-      <label>Speed (m/s): <span id="speed-val">30</span></label>
-      <input type="range" id="speed" min="10" max="60" value="30" step="1"/>
+      <label>Source 1 Frequency (Hz): <span id="f1-val">440</span></label>
+      <input type="range" id="f1" min="200" max="800" value="440" step="1"/>
     </div>
     <div class="control-group">
-      <label>Angle (°): <span id="angle-val">45</span></label>
-      <input type="range" id="angle" min="5" max="85" value="45" step="1"/>
+      <label>Source 2 Frequency (Hz): <span id="f2-val">440</span></label>
+      <input type="range" id="f2" min="200" max="800" value="440" step="1"/>
     </div>
     <div class="control-group">
-      <label>Air Resistance: 
-        <input type="checkbox" id="drag-toggle" checked/>
-        <span id="drag-status">ON</span>
-      </label>
+      <label>Wavelength (px): <span id="wl-val">80</span></label>
+      <input type="range" id="wl" min="40" max="150" value="80" step="1"/>
     </div>
-    <button id="launch-btn">Launch!</button>
-    <button id="reset-btn">Reset</button>
+    <div class="control-group">
+      <label>Phase Diff (°): <span id="phase-val">0</span></label>
+      <input type="range" id="phase" min="0" max="360" value="0" step="1"/>
+    </div>
+    <div class="control-group">
+      <label>Mode:</label>
+      <select id="mode">
+        <option value="light">Light (Visual)</option>
+        <option value="sound">Sound (Audio)</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <button id="reset-btn">Reset Sources</button>
+    </div>
   </div>
 
-  <div class="graph-container">
-    <h3>Range vs Launch Angle</h3>
-    <canvas id="graph-canvas"></canvas>
-    <div class="legend">
-      <span class="ideal">No Air Resistance</span> |
-      <span class="real">With Air Resistance</span>
-    </div>
+  <div class="legend">
+    <span class="antinode">Red Dots = Antinodes (Constructive)</span> |
+    <span class="node">Dark Areas = Nodes (Destructive)</span>
   </div>
 
   <script>
-    let balls = [], trails = [];
-    let graphData = { ideal: [], real: [] };
-    let launched = false;
-    const g = 9.81, dt = 0.016, scale = 10, dragCoeff = 0.001;
+    let osc1, osc2;
+    let source1, source2;
+    let waveField = [];
+    let gridSize = 20;
+    let mode = 'light';
 
     function setup() {
-      let canvas = createCanvas(800, 400);
+      let canvas = createCanvas(800, 500);
       canvas.parent('canvas-container');
-      resetSimulation();
+      angleMode(DEGREES);
+
+      // Initialize oscillators
+      osc1 = new p5.Oscillator('sine');
+      osc2 = new p5.Oscillator('sine');
+      osc1.start(); osc2.start();
+      osc1.amp(0); osc2.amp(0);
+
+      // Sources
+      source1 = createVector(width * 0.3, height / 2);
+      source2 = createVector(width * 0.7, height / 2);
+
+      initWaveField();
       setupUI();
     }
 
     function draw() {
-      background(240, 248, 255);
-      drawGround();
-      drawCannon();
-      updateBalls();
-      if (launched) { launchBall(); launched = false; }
-      if (balls.length === 2 && !balls[0].active && !balls[1].active && balls[0].landed) updateGraph();
+      background(255);
+      updateMode();
+      updateWaveField();
+      drawWaves();
+      drawSources();
+      drawInterferencePoints();
     }
 
-    function drawGround() {
-      fill(34, 139, 34); rect(0, height - 50, width, 50);
-    }
-
-    function drawCannon() {
-      push(); translate(80, height - 70);
-      rotate(-radians(angleSlider.value()));
-      fill(100, 100, 100); rect(0, -15, 80, 30);
-      pop();
-    }
-
-    function launchBall() {
-      resetSimulation();
-      let v0 = speedSlider.value(), theta = radians(angleSlider.value());
-      balls.push(new Ball(v0 * cos(theta), -v0 * sin(theta), false));
-      balls.push(new Ball(v0 * cos(theta), -v0 * sin(theta), true));
-      trails = [[], []];
-    }
-
-    function updateBalls() {
-      for (let i = 0; i < balls.length; i++) {
-        let b = balls[i];
-        if (b.active) { b.update(); b.display(i); }
-      }
-    }
-
-    class Ball {
-      constructor(vx, vy, hasDrag) {
-        this.x = 80; this.y = height - 85;
-        this.vx = vx; this.vy = vy;
-        this.hasDrag = hasDrag;
-        this.active = true; this.landed = false;
-        this.trail = [];
-      }
-      update() {
-        if (!this.active) return;
-        let ax = 0, ay = g;
-        if (this.hasDrag) {
-          let speed = sqrt(this.vx**2 + this.vy**2);
-          let drag = dragCoeff * speed * speed;
-          let angle = atan2(this.vy, this.vx);
-          ax -= drag * cos(angle); ay += drag * sin(angle);
+    function initWaveField() {
+      waveField = [];
+      for (let x = 0; x < width; x += gridSize) {
+        let col = [];
+        for (let y = 0; y < height; y += gridSize) {
+          col.push(0);
         }
-        this.vx += ax * dt; this.vy += ay * dt;
-        this.x += this.vx * dt * scale; this.y += this.vy * dt * scale;
-        this.trail.push({x: this.x, y: this.y});
-        if (this.trail.length > 300) this.trail.shift();
-        if (this.y > height - 70) { this.y = height - 70; this.active = false; this.landed = true; }
-      }
-      display(i) {
-        let col = this.hasDrag ? color(231, 76, 60) : color(52, 152, 219);
-        fill(col); noStroke(); ellipse(this.x, this.y, 12, 12);
-        stroke(col); strokeWeight(2); noFill();
-        beginShape();
-        for (let p of this.trail) vertex(p.x, p.y);
-        endShape();
+        waveField.push(col);
       }
     }
 
-    function resetSimulation() {
-      balls = []; trails = [[], []];
+    function updateWaveField() {
+      let f1 = f1Slider.value(), f2 = f2Slider.value();
+      let wl = wlSlider.value();
+      let phaseDiff = phaseSlider.value();
+      let t = frameCount * 0.05;
+
+      for (let i = 0; i < waveField.length; i++) {
+        for (let j = 0; j < waveField[i].length; j++) {
+          let x = i * gridSize + gridSize / 2;
+          let y = j * gridSize + gridSize / 2;
+
+          let d1 = dist(x, y, source1.x, source1.y);
+          let d2 = dist(x, y, source2.x, source2.y);
+
+          let wave1 = sin((2 * PI * f1 * t) - (2 * PI * d1 / wl));
+          let wave2 = sin((2 * PI * f2 * t) - (2 * PI * d2 / wl) + radians(phaseDiff));
+
+          waveField[i][j] = wave1 + wave2;
+        }
+      }
     }
 
-    // UI
-    let speedSlider, angleSlider, dragToggle, launchBtn, resetBtn;
+    function drawWaves() {
+      noStroke();
+      for (let i = 0; i < waveField.length; i++) {
+        for (let j = 0; j < waveField[i].length; j++) {
+          let amp = waveField[i][j];
+          let brightness = map(abs(amp), 0, 2, 255, 0);
+          let x = i * gridSize;
+          let y = j * gridSize;
+
+          if (mode === 'light') {
+            fill(brightness);
+          } else {
+            let gray = map(amp, -2, 2, 0, 255);
+            fill(gray);
+          }
+          rect(x, y, gridSize, gridSize);
+        }
+      }
+    }
+
+    function drawSources() {
+      fill(52, 152, 219); stroke(0); strokeWeight(2);
+      ellipse(source1.x, source1.y, 20, 20);
+      ellipse(source2.x, source2.y, 20, 20);
+
+      fill(255); noStroke(); textAlign(CENTER, CENTER);
+      textSize(12); text("S1", source1.x, source1.y);
+      text("S2", source2.x, source2.y);
+    }
+
+    function drawInterferencePoints() {
+      strokeWeight(6);
+      for (let i = 0; i < waveField.length; i += 2) {
+        for (let j = 0; j < waveField[i].length; j += 2) {
+          let amp = waveField[i][j];
+          let x = i * gridSize + gridSize / 2;
+          let y = j * gridSize + gridSize / 2;
+
+          if (abs(amp) > 1.8) {
+            stroke(231, 76, 60); // Red = Antinode
+            point(x, y);
+          }
+        }
+      }
+    }
+
+    function updateMode() {
+      mode = modeSelect.value();
+      if (mode === 'sound') {
+        osc1.freq(f1Slider.value());
+        osc2.freq(f2Slider.value());
+        osc1.amp(0.2); osc2.amp(0.2);
+      } else {
+        osc1.amp(0); osc2.amp(0);
+      }
+    }
+
+    // UI Elements
+    let f1Slider, f2Slider, wlSlider, phaseSlider, modeSelect, resetBtn;
+
     function setupUI() {
-      speedSlider = select('#speed'); angleSlider = select('#angle');
-      dragToggle = select('#drag-toggle'); launchBtn = select('#launch-btn');
-      resetBtn = select('#reset-btn');
-      speedSlider.input(() => select('#speed-val').html(speedSlider.value()));
-      angleSlider.input(() => select('#angle-val').html(angleSlider.value()));
-      dragToggle.changed(() => select('#drag-status').html(dragToggle.checked ? "ON" : "OFF"));
-      launchBtn.mousePressed(() => launched = true);
+      f1Slider = select('#f1'); f2Slider = select('#f2');
+      wlSlider = select('#wl'); phaseSlider = select('#phase');
+      modeSelect = select('#mode'); resetBtn = select('#reset-btn');
+
+      f1Slider.input(updateLabels);
+      f2Slider.input(updateLabels);
+      wlSlider.input(updateLabels);
+      phaseSlider.input(updateLabels);
+      modeSelect.changed(updateMode);
       resetBtn.mousePressed(() => {
-        resetSimulation();
-        graphData = { ideal: [], real: [] };
-        drawGraph(); // Clear graph
+        source1.set(width * 0.3, height / 2);
+        source2.set(width * 0.7, height / 2);
+        initWaveField();
       });
-      select('#speed-val').html(30); select('#angle-val').html(45);
+
+      updateLabels();
     }
 
-    // FULLY VISIBLE GRAPH: 0° to 90°, 0 to max range
-    function updateGraph() {
-      let idealRange = balls[0].x / scale;
-      let realRange = balls[1].x / scale;
-      let angle = angleSlider.value();
-
-      graphData.ideal.push({angle, range: idealRange});
-      graphData.real.push({angle, range: realRange});
-
-      graphData.ideal.sort((a,b) => a.angle - b.angle);
-      graphData.real.sort((a,b) => a.angle - b.angle);
-
-      drawGraph();
+    function updateLabels() {
+      select('#f1-val').html(f1Slider.value());
+      select('#f2-val').html(f2Slider.value());
+      select('#wl-val').html(wlSlider.value());
+      select('#phase-val').html(phaseSlider.value());
     }
 
-    function drawGraph() {
-      let ctx = select('#graph-canvas').elt.getContext('2d');
-      let w = 900, h = 450, pad = 70;
-      ctx.clearRect(0, 0, w, h);
-
-      // Get max range from all data
-      let allRanges = [...graphData.ideal, ...graphData.real].map(d => d.range);
-      let maxRange = allRanges.length > 0 ? Math.max(...allRanges) : 100;
-      maxRange = Math.ceil(maxRange / 50) * 50; // Round up to nearest 50
-
-      // Grid
-      ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
-      for (let i = 0; i <= 6; i++) {
-        let y = pad + i * (h - 2*pad) / 6;
-        ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
+    // Allow dragging sources
+    function mousePressed() {
+      if (dist(mouseX, mouseY, source1.x, source1.y) < 20) {
+        source1.dragging = true;
+      } else if (dist(mouseX, mouseY, source2.x, source2.y) < 20) {
+        source2.dragging = true;
       }
-      for (let i = 0; i <= 6; i++) {
-        let x = pad + i * (w - 2*pad) / 6;
-        ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
-      }
-
-      // Axes
-      ctx.strokeStyle = '#333'; ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(pad, h - pad); ctx.lineTo(pad, pad);
-      ctx.lineTo(w - pad, pad); ctx.stroke();
-
-      // X-axis: 0°, 15°, 30°, 45°, 60°, 75°, 90°
-      ctx.fillStyle = '#333'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
-      const angles = [0, 15, 30, 45, 60, 75, 90];
-      angles.forEach(a => {
-        let x = pad + (a / 90) * (w - 2*pad);
-        ctx.fillText(a + '°', x, h - pad + 25);
-      });
-
-      // Y-axis: 0 to maxRange in 6 steps
-      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-      for (let i = 0; i <= 6; i++) {
-        let range = (maxRange / 6) * i;
-        let y = h - pad - (range / maxRange) * (h - 2*pad);
-        ctx.fillText(Math.round(range), pad - 15, y);
-      }
-
-      // Axis Labels
-      ctx.font = '16px Arial'; ctx.fillStyle = '#222';
-      ctx.textAlign = 'center';
-      ctx.fillText('Launch Angle (degrees)', w/2, h - 15);
-      ctx.save(); ctx.translate(25, h/2); ctx.rotate(-Math.PI/2);
-      ctx.fillText('Range (meters)', 0, 0); ctx.restore();
-
-      // Plot: No Drag (Blue)
-      ctx.strokeStyle = '#3498db'; ctx.lineWidth = 3;
-      ctx.beginPath();
-      graphData.ideal.forEach((d, i) => {
-        let x = pad + (d.angle / 90) * (w - 2*pad);
-        let y = h - pad - (d.range / maxRange) * (h - 2*pad);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        ctx.fillStyle = '#3498db';
-        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
-      });
-      ctx.stroke();
-
-      // Plot: With Drag (Red)
-      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3;
-      ctx.beginPath();
-      graphData.real.forEach((d, i) => {
-        let x = pad + (d.angle / 90) * (w - 2*pad);
-        let y = h - pad - (d.range / maxRange) * (h - 2*pad);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        ctx.fillStyle = '#e74c3c';
-        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
-      });
-      ctx.stroke();
     }
 
-    function windowResized() { resizeCanvas(800, 400); }
+    function mouseDragged() {
+      if (source1.dragging) {
+        source1.set(constrain(mouseX, 20, width - 20), constrain(mouseY, 20, height - 20));
+      } else if (source2.dragging) {
+        source2.set(constrain(mouseX, 20, width - 20), constrain(mouseY, 20, height - 20));
+      }
+    }
+
+    function mouseReleased() {
+      source1.dragging = false;
+      source2.dragging = false;
+    }
+
+    function windowResized() {
+      resizeCanvas(800, 500);
+      initWaveField();
+    }
   </script>
 </body>
 </html>
