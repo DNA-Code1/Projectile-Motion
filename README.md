@@ -1,14 +1,3 @@
-"""
-Projectile Motion Simulation with and without Quadratic Air Resistance
-Author: Your Name
-For: 1st-Year Engineering Physics Project
-License: MIT
-
-Run examples:
-    python projectile_simulation.py --mode demo
-    python projectile_simulation.py --mode sweep-angle --v0 40 --theta 35 --k 0.06 --m 0.2 --dt 0.002
-"""
-
 import math
 import argparse
 import os
